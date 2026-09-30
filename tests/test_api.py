@@ -126,3 +126,13 @@ def test_history(client):
 
 def test_history_unknown_card_returns_404(client):
     assert client.get("/watchlist/99/history").status_code == 404
+
+
+# --- Web UI ---
+
+
+def test_index_serves_the_web_ui(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Cardmarket Price Watcher" in response.text
+    assert client.get("/static/app.js").status_code == 200

@@ -1,0 +1,230 @@
+:root {
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --text: #1c1f24;
+  --muted: #5f6772;
+  --border: #dde1e6;
+  --accent: #2563eb;
+  --accent-text: #ffffff;
+  --success-bg: #e7f6ec;
+  --success-text: #1d6b39;
+  --error-bg: #fdecec;
+  --error-text: #a12626;
+  --good: #1d8a4a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171b;
+    --panel: #1e2126;
+    --text: #e6e8eb;
+    --muted: #9aa2ad;
+    --border: #2f343b;
+    --accent: #4f8cff;
+    --success-bg: #173324;
+    --success-text: #8fdcaa;
+    --error-bg: #3a1c1c;
+    --error-text: #f2a0a0;
+    --good: #5ccf8a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+h2 {
+  margin: 0 0 16px;
+  font-size: 1.15rem;
+}
+
+.subtitle {
+  margin: 4px 0 24px;
+  color: var(--muted);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panel-header h2 {
+  margin: 0;
+}
+
+form {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto auto;
+  gap: 16px;
+  align-items: end;
+}
+
+@media (max-width: 720px) {
+  form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  form label:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+.hint {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+label.checkbox {
+  flex-direction: row;
+  align-items: center;
+  padding-bottom: 10px;
+}
+
+input:not([type="checkbox"]) {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+button {
+  padding: 10px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.message {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.message.success {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.message.error {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+td.wrap {
+  white-space: normal;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+td.below-target {
+  color: var(--good);
+  font-weight: 700;
+}
+
+td button {
+  padding: 5px 10px;
+  font-size: 0.85rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+.empty {
+  color: var(--muted);
+  margin: 16px 0 0;
+}
+
+footer {
+  text-align: center;
+  font-size: 0.9rem;
+}

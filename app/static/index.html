@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cardmarket Price Watcher</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Cardmarket Price Watcher</h1>
+        <p class="subtitle">Get a Discord alert when a card drops below your target price.</p>
+      </header>
+
+      <section class="panel">
+        <h2>Add a card</h2>
+        <form id="add-form">
+          <label>
+            Card name
+            <input name="name" required placeholder="Sol Ring" autocomplete="off" />
+          </label>
+          <label>
+            Set code
+            <input name="set_code" required minlength="2" maxlength="6" placeholder="cmm" autocomplete="off" />
+          </label>
+          <label>
+            Target price (€)
+            <input name="target_price" type="number" required min="0.01" step="0.01" placeholder="1.00" />
+          </label>
+          <label class="checkbox">
+            <input name="foil" type="checkbox" />
+            Foil
+          </label>
+          <button type="submit">Add to watchlist</button>
+        </form>
+        <p class="hint">
+          The set code is the one Scryfall uses, e.g. <code>cmm</code> for Commander Masters.
+          <a href="https://scryfall.com/sets" target="_blank" rel="noopener">Look up set codes</a>
+        </p>
+        <p id="message" class="message" role="status" hidden></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Watchlist</h2>
+          <button id="check-button" type="button" class="secondary">Check prices now</button>
+        </div>
+        <div class="table-wrapper">
+          <table id="watchlist">
+            <thead>
+              <tr>
+                <th>Card</th>
+                <th>Set</th>
+                <th>Foil</th>
+                <th class="number">Target</th>
+                <th class="number">Lowest</th>
+                <th class="number">Trend</th>
+                <th class="number">30-day avg</th>
+                <th>Last checked</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="empty" class="empty" hidden>No cards on your watchlist yet.</p>
+      </section>
+
+      <footer>
+        <a href="/docs">API documentation</a>
+      </footer>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

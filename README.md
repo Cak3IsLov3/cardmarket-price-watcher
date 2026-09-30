@@ -8,6 +8,7 @@ A FastAPI service that keeps a watchlist of cards, checks them every hour agains
 
 ## Features
 
+- **Web interface**: add cards through a form and see your watchlist with the latest prices
 - **Watchlist API**: add a card by name and set code, list cards with their latest price, remove cards
 - **Scheduled price checks**: an hourly job that only does real work when Cardmarket publishes a new price guide
 - **Discord alerts**: sent once when the price drops below your target, not every hour it stays there
@@ -74,7 +75,7 @@ Create a webhook in Discord (channel settings → Integrations → Webhooks → 
 uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/docs to use the API through Swagger UI. The first price check runs right after startup.
+Open http://127.0.0.1:8000 for the web interface, or http://127.0.0.1:8000/docs for the API in Swagger UI. The first price check runs right after startup.
 
 > **Run a single worker.** Each Uvicorn worker starts its own scheduler, so `--workers 4` would run four price checks and could send duplicate alerts.
 
@@ -89,6 +90,9 @@ Open http://127.0.0.1:8000/docs to use the API through Swagger UI. The first pri
 | `SCRYFALL_USER_AGENT` | `CardmarketPriceWatcher/0.1` | User-Agent sent to Scryfall, as their API requires. |
 
 ## API
+
+The web interface at `/` is a small HTML/JavaScript page (`app/static/`) that uses the same endpoints.
+
 
 | Method | Endpoint | Description |
 |---|---|---|
