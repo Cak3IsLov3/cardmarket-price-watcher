@@ -1,6 +1,17 @@
 from decimal import Decimal
 
+import httpx
 import pytest
+import respx
+
+from app.config import PRICE_GUIDE_URL
+from app.services.price_guide import (
+    PriceGuideError,
+    extract_prices,
+    fetch_price_guide,
+    parse_price_guide,
+    to_decimal,
+)
 
 from app.services.price_guide import (
     PriceGuideError,
@@ -73,3 +84,25 @@ def test_parse_price_guide_keeps_only_wanted_ids():
 def test_parse_price_guide_rejects_unexpected_format():
     with pytest.raises(PriceGuideError):
         parse_price_guide({"something": "else"}, {721733})
+
+@pytest.mark.anyio
+@respx.mock
+async def test_fetch_price_guide_success():
+    respx.get(PRICE_GUIDE_URL).mock(return_value=httpx.Response(200, json=SAMPLE_GUIDE))
+    assert await fetch_price_guide() == SAMPLE_GUIDE
+
+
+@pytest.mark.anyio
+@respx.mock
+async def test_fetch_price_guide_server_error():
+    respx.get(PRICE_GUIDE_URL).mock(return_value=httpx.Response(500))
+    with pytest.raises(PriceGuideError):
+        await fetch_price_guide()
+
+
+@pytest.mark.anyio
+@respx.mock
+async def test_fetch_price_guide_network_error():
+    respx.get(PRICE_GUIDE_URL).mock(side_effect=httpx.ConnectError("connection refused"))
+    with pytest.raises(PriceGuideError):
+        await fetch_price_guide()
