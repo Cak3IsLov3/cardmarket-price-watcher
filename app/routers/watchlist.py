@@ -39,11 +39,11 @@ def add_card(payload: CardCreate, session: Session = Depends(get_session)) -> Ca
     try:
         info = lookup_card(payload.name, payload.set_code)
     except CardNotFoundError as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except NotOnCardmarketError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     except ScryfallError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
     existing = session.exec(
         select(Card).where(
@@ -91,7 +91,7 @@ async def check_prices(db_engine: Engine = Depends(get_engine)) -> dict:
     try:
         result = await run_price_check(db_engine)
     except PriceGuideError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     return asdict(result)
 
 @router.get("/{card_id}/history", response_model=CardHistory)

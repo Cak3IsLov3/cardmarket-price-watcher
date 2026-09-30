@@ -13,13 +13,6 @@ from app.services.price_guide import (
     to_decimal,
 )
 
-from app.services.price_guide import (
-    PriceGuideError,
-    extract_prices,
-    parse_price_guide,
-    to_decimal,
-)
-
 # Real entry for Sol Ring (Commander Masters) from the spike
 SOL_RING_ENTRY = {
     "idProduct": 721733,
