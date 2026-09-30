@@ -62,6 +62,7 @@ class CardRead(BaseModel):
     cardmarket_url: str
     latest_price: LatestPrice | None
 
+
 class AlertRead(BaseModel):
     sent_at: datetime
     price_at_alert: Decimal
@@ -76,3 +77,29 @@ class CardHistory(BaseModel):
     target_price: Decimal
     checks: list[LatestPrice]
     alerts: list[AlertRead]
+
+
+class CheckResponse(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "price_guide_created_at": "2026-09-30T09:54:57+0200",
+                    "checked": 1,
+                    "skipped": 0,
+                    "missing": [],
+                    "alerts_sent": 1,
+                }
+            ]
+        }
+    )
+
+    price_guide_created_at: str | None
+    checked: int
+    skipped: int
+    missing: list[int]
+    alerts_sent: int
+
+
+class ErrorResponse(BaseModel):
+    detail: str

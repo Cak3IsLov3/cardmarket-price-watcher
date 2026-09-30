@@ -12,30 +12,7 @@ from app.services.price_guide import (
     parse_price_guide,
     to_decimal,
 )
-
-# Real entry for Sol Ring (Commander Masters) from the spike
-SOL_RING_ENTRY = {
-    "idProduct": 721733,
-    "idCategory": 1,
-    "avg": 1.04,
-    "low": 0.48,
-    "trend": 0.92,
-    "avg1": 0.75,
-    "avg7": 1.01,
-    "avg30": 1.04,
-    "avg-foil": 3.53,
-    "low-foil": 1.8,
-    "trend-foil": 3.28,
-    "avg1-foil": 2.99,
-    "avg7-foil": 3.71,
-    "avg30-foil": 2.97,
-}
-
-SAMPLE_GUIDE = {
-    "version": 1,
-    "createdAt": "2026-09-30T09:54:57+0200",
-    "priceGuides": [SOL_RING_ENTRY, {"idProduct": 1, "low": 0.02}],
-}
+from tests.sample_data import SAMPLE_GUIDE, SOL_RING_ENTRY
 
 
 def test_to_decimal_rounds_to_cents():
@@ -77,6 +54,7 @@ def test_parse_price_guide_keeps_only_wanted_ids():
 def test_parse_price_guide_rejects_unexpected_format():
     with pytest.raises(PriceGuideError):
         parse_price_guide({"something": "else"}, {721733})
+
 
 @pytest.mark.anyio
 @respx.mock

@@ -7,7 +7,15 @@ from sqlmodel import Session, col, select
 from app.config import CARDMARKET_PRODUCT_URL
 from app.database import get_engine, get_session
 from app.models import Alert, Card, PriceCheck
-from app.schemas import AlertRead, CardCreate, CardHistory, CardRead, LatestPrice
+from app.schemas import (
+    AlertRead,
+    CardCreate,
+    CardHistory,
+    CardRead,
+    CheckResponse,
+    ErrorResponse,
+    LatestPrice,
+)
 from app.services.checker import run_price_check
 from app.services.price_guide import PriceGuideError
 from app.services.scryfall import (
@@ -19,6 +27,12 @@ from app.services.scryfall import (
 
 router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
+
+def error_response(description: str) -> dict:
+    return {"model": ErrorResponse, "description": description}
+
+
+CARD_NOT_FOUND = {404: error_response("No card with this id on the watchlist")}
 
 
 def to_card_read(card: Card, session: Session) -> CardRead:
@@ -34,7 +48,16 @@ def to_card_read(card: Card, session: Session) -> CardRead:
     )
 
 
-@router.post("", response_model=CardRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=CardRead,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        404: error_response("Scryfall has no card with this name in this set"),
+        409: error_response("This printing is already on the watchlist"),
+        502: error_response("Scryfall could not be reached"),
+    },
+)
 def add_card(payload: CardCreate, session: Session = Depends(get_session)) -> CardRead:
     try:
         info = lookup_card(payload.name, payload.set_code)
@@ -46,9 +69,7 @@ def add_card(payload: CardCreate, session: Session = Depends(get_session)) -> Ca
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
     existing = session.exec(
-        select(Card).where(
-            Card.cardmarket_id == info.cardmarket_id, Card.foil == payload.foil
-        )
+        select(Card).where(Card.cardmarket_id == info.cardmarket_id, Card.foil == payload.foil)
     ).first()
     if existing:
         raise HTTPException(
@@ -77,7 +98,7 @@ def list_cards(session: Session = Depends(get_session)) -> list[CardRead]:
     return [to_card_read(card, session) for card in cards]
 
 
-@router.delete("/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{card_id}", status_code=status.HTTP_204_NO_CONTENT, responses=CARD_NOT_FOUND)
 def delete_card(card_id: int, session: Session = Depends(get_session)) -> None:
     card = session.get(Card, card_id)
     if card is None:
@@ -86,24 +107,27 @@ def delete_card(card_id: int, session: Session = Depends(get_session)) -> None:
     session.commit()
 
 
-@router.post("/check")
-async def check_prices(db_engine: Engine = Depends(get_engine)) -> dict:
+@router.post(
+    "/check",
+    response_model=CheckResponse,
+    responses={502: error_response("The Cardmarket price guide could not be downloaded")},
+)
+async def check_prices(db_engine: Engine = Depends(get_engine)) -> CheckResponse:
     try:
         result = await run_price_check(db_engine)
     except PriceGuideError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
-    return asdict(result)
+    return CheckResponse(**asdict(result))
 
-@router.get("/{card_id}/history", response_model=CardHistory)
+
+@router.get("/{card_id}/history", response_model=CardHistory, responses=CARD_NOT_FOUND)
 def card_history(card_id: int, session: Session = Depends(get_session)) -> CardHistory:
     card = session.get(Card, card_id)
     if card is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Card not found")
 
     checks = session.exec(
-        select(PriceCheck)
-        .where(PriceCheck.card_id == card_id)
-        .order_by(col(PriceCheck.checked_at))
+        select(PriceCheck).where(PriceCheck.card_id == card_id).order_by(col(PriceCheck.checked_at))
     ).all()
     alerts = session.exec(
         select(Alert).where(Alert.card_id == card_id).order_by(col(Alert.sent_at))

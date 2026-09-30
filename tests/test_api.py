@@ -4,8 +4,7 @@ import respx
 
 from app.config import PRICE_GUIDE_URL
 from app.services.scryfall import SCRYFALL_API
-from tests.test_price_guide import SAMPLE_GUIDE
-from tests.test_scryfall import SOL_RING
+from tests.sample_data import SAMPLE_GUIDE, SOL_RING
 
 NAMED_URL = f"{SCRYFALL_API}/cards/named"
 WEBHOOK_URL = "https://discord.test/webhook"

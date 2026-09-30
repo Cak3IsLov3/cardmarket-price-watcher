@@ -10,17 +10,9 @@ from app.services.scryfall import (
     lookup_card,
     parse_card,
 )
+from tests.sample_data import SOL_RING
 
 NAMED_URL = f"{SCRYFALL_API}/cards/named"
-
-SOL_RING = {
-    "object": "card",
-    "id": "46ca0b66-a000-4483-b916-f5b89e710244",
-    "name": "Sol Ring",
-    "set": "cmm",
-    "set_name": "Commander Masters",
-    "cardmarket_id": 721733,
-}
 
 
 def test_parse_card():

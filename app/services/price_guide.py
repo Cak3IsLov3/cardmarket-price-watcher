@@ -42,7 +42,8 @@ def extract_prices(entry: dict, foil: bool) -> Prices:
 
 def parse_price_guide(data: dict, wanted_ids: set[int]) -> PriceGuide:
     try:
-        entries = {            entry["idProduct"]: entry
+        entries = {
+            entry["idProduct"]: entry
             for entry in data["priceGuides"]
             if entry["idProduct"] in wanted_ids
         }

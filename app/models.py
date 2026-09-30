@@ -22,9 +22,7 @@ class Card(SQLModel, table=True):
     active: bool = True
     created_at: datetime = Field(default_factory=utcnow)
 
-    price_checks: list["PriceCheck"] = Relationship(
-        back_populates="card", cascade_delete=True
-    )
+    price_checks: list["PriceCheck"] = Relationship(back_populates="card", cascade_delete=True)
     alerts: list["Alert"] = Relationship(back_populates="card", cascade_delete=True)
 
 
