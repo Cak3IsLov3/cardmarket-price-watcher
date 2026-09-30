@@ -10,6 +10,7 @@ A FastAPI service that keeps a watchlist of cards, checks them every hour agains
 
 - **Web interface**: add cards through a form and see your watchlist with the latest prices
 - **Watchlist API**: add a card by name and set code, list cards with their latest price, remove cards
+- **Any printing**: leave out the set code to watch every printing of a card and get alerted on the cheapest one
 - **Scheduled price checks**: an hourly job that only does real work when Cardmarket publishes a new price guide
 - **Discord alerts**: sent once when the price drops below your target, not every hour it stays there
 - **Price history**: every check and every alert per card, oldest first
@@ -30,8 +31,8 @@ flowchart LR
     C -- "price dropped below target" --> D[Discord webhook]
 ```
 
-1. **Adding a card**: Scryfall resolves the name and set to Cardmarket's product ID. The same card can have dozens of printings (Sol Ring has 146 on Cardmarket), so the set code matters.
-2. **Checking prices**: the scheduler downloads Cardmarket's price guide (one JSON file with prices for every product), keeps only the cards on the watchlist and stores a price check for each.
+1. **Adding a card**: Scryfall resolves the name and set to Cardmarket's product ID. The same card can have dozens of printings (Sol Ring has 146 on Cardmarket). With a set code you watch one printing; without it, Scryfall's search returns every printing that is linked to Cardmarket, and all of them are stored.
+2. **Checking prices**: the scheduler downloads Cardmarket's price guide (one JSON file with prices for every product), keeps only the products on the watchlist and stores a price check per card, using the cheapest printing.
 3. **Alerting**: if a card's lowest price crossed from above to at or below the target, a Discord embed is sent and the alert is recorded.
 
 ## From scraper to official feed
@@ -96,7 +97,7 @@ The web interface at `/` is a small HTML/JavaScript page (`app/static/`) that us
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/watchlist` | Add a card: `{"name": "Sol Ring", "set_code": "cmm", "target_price": "1.00", "foil": false}` |
+| `POST` | `/watchlist` | Add a card: `{"name": "Sol Ring", "set_code": "cmm", "target_price": "1.00", "foil": false}`. Use `"set_code": null` to watch every printing. |
 | `GET` | `/watchlist` | All cards with their latest price |
 | `DELETE` | `/watchlist/{card_id}` | Remove a card and its history |
 | `GET` | `/watchlist/{card_id}/history` | All price checks and alerts for a card |
@@ -122,6 +123,7 @@ Test data in `tests/sample_data.py` is taken from real Scryfall and Cardmarket r
 - **Missed alerts aren't retried.** If the Discord webhook fails, that alert is lost, because the next check no longer sees a crossing. A retry queue would fix this.
 - **No condition or language filter.** The price guide is an aggregate across all conditions and languages, so `low` can be a played or foreign copy.
 - **Prices update daily**, since that's how often Cardmarket refreshes the guide.
+- **"Any printing" relies on Scryfall's links to Cardmarket.** For Sol Ring, Scryfall links 127 of Cardmarket's 146 products; mostly special versions (Secret Lair, The List) are missing. Printings released after you add a card aren't picked up until you add it again.
 - **Ideas**: bulk import from an Archidekt decklist, a chart of the price history, Docker, deployment to Railway or Fly.io, PostgreSQL, GitHub Actions CI.
 
 ## Disclaimer

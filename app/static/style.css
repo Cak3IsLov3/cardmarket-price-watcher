@@ -195,6 +195,12 @@ td.wrap {
   white-space: normal;
 }
 
+.detail {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 th {
   color: var(--muted);
   font-weight: 600;

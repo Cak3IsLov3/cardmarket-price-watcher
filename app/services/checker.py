@@ -5,10 +5,16 @@ from sqlmodel import Session, col, select
 
 from app.config import CARDMARKET_PRODUCT_URL
 from app.database import engine as default_engine
-from app.models import Alert, Card, PriceCheck
+from app.models import Alert, Card, CardPrinting, PriceCheck
 from app.services.alerts import should_alert
 from app.services.discord import AlertMessage, send_alert
-from app.services.price_guide import extract_prices, fetch_price_guide, parse_price_guide
+from app.services.price_guide import (
+    PriceGuide,
+    Prices,
+    extract_prices,
+    fetch_price_guide,
+    parse_price_guide,
+)
 
 
 @dataclass(frozen=True)
@@ -32,9 +38,24 @@ def latest_check(session: Session, card_id: int) -> PriceCheck | None:
     ).first()
 
 
+def cheapest_printing(card: Card, guide: PriceGuide) -> tuple[CardPrinting, Prices] | None:
+    """The printing with the lowest 'low' price, or None if no printing is in the feed."""
+    candidates = [
+        (printing, extract_prices(guide.entries[printing.cardmarket_id], card.foil))
+        for printing in card.printings
+        if printing.cardmarket_id in guide.entries
+    ]
+    if not candidates:
+        return None
+    # Printings without a low price sort last
+    return min(candidates, key=lambda c: (c[1].low is None, c[1].low or 0))
+
+
 async def run_price_check(engine: Engine = default_engine) -> CheckResult:
     with Session(engine) as session:
-        wanted_ids = {card.cardmarket_id for card in active_cards(session)}
+        wanted_ids = {
+            printing.cardmarket_id for card in active_cards(session) for printing in card.printings
+        }
     if not wanted_ids:
         return CheckResult(price_guide_created_at=None)
 
@@ -45,8 +66,8 @@ async def run_price_check(engine: Engine = default_engine) -> CheckResult:
 
     with Session(engine) as session:
         for card in active_cards(session):
-            entry = guide.entries.get(card.cardmarket_id)
-            if entry is None:
+            best = cheapest_printing(card, guide)
+            if best is None:
                 missing.append(card.id)
                 continue
 
@@ -55,10 +76,11 @@ async def run_price_check(engine: Engine = default_engine) -> CheckResult:
                 skipped += 1
                 continue
 
-            prices = extract_prices(entry, card.foil)
+            printing, prices = best
             session.add(
                 PriceCheck(
                     card_id=card.id,
+                    cardmarket_id=printing.cardmarket_id,
                     low=prices.low,
                     trend=prices.trend,
                     avg30=prices.avg30,
@@ -74,11 +96,12 @@ async def run_price_check(engine: Engine = default_engine) -> CheckResult:
                         card.id,
                         AlertMessage(
                             card_name=card.name,
-                            set_name=card.set_name,
+                            set_name=printing.set_name,
+                            any_printing=card.set_code is None,
                             foil=card.foil,
                             price=prices.low,
                             target_price=card.target_price,
-                            cardmarket_url=CARDMARKET_PRODUCT_URL.format(id=card.cardmarket_id),
+                            cardmarket_url=CARDMARKET_PRODUCT_URL.format(id=printing.cardmarket_id),
                         ),
                     )
                 )

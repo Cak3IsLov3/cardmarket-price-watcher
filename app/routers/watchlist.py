@@ -1,12 +1,13 @@
 from dataclasses import asdict
+from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import Engine
 from sqlmodel import Session, col, select
 
-from app.config import CARDMARKET_PRODUCT_URL
+from app.config import CARDMARKET_PRODUCT_URL, CARDMARKET_SEARCH_URL
 from app.database import get_engine, get_session
-from app.models import Alert, Card, PriceCheck
+from app.models import Alert, Card, CardPrinting, PriceCheck
 from app.schemas import (
     AlertRead,
     CardCreate,
@@ -23,6 +24,7 @@ from app.services.scryfall import (
     NotOnCardmarketError,
     ScryfallError,
     lookup_card,
+    lookup_printings,
 )
 
 router = APIRouter(prefix="/watchlist", tags=["watchlist"])
@@ -35,6 +37,20 @@ def error_response(description: str) -> dict:
 CARD_NOT_FOUND = {404: error_response("No card with this id on the watchlist")}
 
 
+def to_latest_price(check: PriceCheck, card: Card) -> LatestPrice:
+    set_names = {printing.cardmarket_id: printing.set_name for printing in card.printings}
+    return LatestPrice(**check.model_dump(), set_name=set_names.get(check.cardmarket_id))
+
+
+def cardmarket_url(card: Card, latest: PriceCheck | None) -> str:
+    """Link to the cheapest printing if we know it, otherwise to a Cardmarket search."""
+    if latest and latest.cardmarket_id:
+        return CARDMARKET_PRODUCT_URL.format(id=latest.cardmarket_id)
+    if len(card.printings) == 1:
+        return CARDMARKET_PRODUCT_URL.format(id=card.printings[0].cardmarket_id)
+    return CARDMARKET_SEARCH_URL.format(query=quote_plus(card.name))
+
+
 def to_card_read(card: Card, session: Session) -> CardRead:
     latest = session.exec(
         select(PriceCheck)
@@ -43,8 +59,9 @@ def to_card_read(card: Card, session: Session) -> CardRead:
     ).first()
     return CardRead(
         **card.model_dump(),
-        cardmarket_url=CARDMARKET_PRODUCT_URL.format(id=card.cardmarket_id),
-        latest_price=LatestPrice(**latest.model_dump()) if latest else None,
+        printing_count=len(card.printings),
+        cardmarket_url=cardmarket_url(card, latest),
+        latest_price=to_latest_price(latest, card) if latest else None,
     )
 
 
@@ -53,14 +70,17 @@ def to_card_read(card: Card, session: Session) -> CardRead:
     response_model=CardRead,
     status_code=status.HTTP_201_CREATED,
     responses={
-        404: error_response("Scryfall has no card with this name in this set"),
-        409: error_response("This printing is already on the watchlist"),
+        404: error_response("Scryfall has no card with this name (in this set)"),
+        409: error_response("This card is already on the watchlist"),
         502: error_response("Scryfall could not be reached"),
     },
 )
 def add_card(payload: CardCreate, session: Session = Depends(get_session)) -> CardRead:
     try:
-        info = lookup_card(payload.name, payload.set_code)
+        if payload.set_code:
+            printings = [lookup_card(payload.name, payload.set_code)]
+        else:
+            printings = lookup_printings(payload.name)
     except CardNotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except NotOnCardmarketError as exc:
@@ -68,8 +88,13 @@ def add_card(payload: CardCreate, session: Session = Depends(get_session)) -> Ca
     except ScryfallError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
+    name = printings[0].name  # Scryfall's spelling, e.g. "sol ring" becomes "Sol Ring"
+    set_code = printings[0].set_code if payload.set_code else None
+    set_name = printings[0].set_name if payload.set_code else None
+
+    same_set = Card.set_code == set_code if set_code else col(Card.set_code).is_(None)
     existing = session.exec(
-        select(Card).where(Card.cardmarket_id == info.cardmarket_id, Card.foil == payload.foil)
+        select(Card).where(Card.name == name, same_set, Card.foil == payload.foil)
     ).first()
     if existing:
         raise HTTPException(
@@ -78,13 +103,20 @@ def add_card(payload: CardCreate, session: Session = Depends(get_session)) -> Ca
         )
 
     card = Card(
-        name=info.name,
-        set_code=info.set_code,
-        set_name=info.set_name,
-        cardmarket_id=info.cardmarket_id,
-        scryfall_id=info.scryfall_id,
+        name=name,
+        set_code=set_code,
+        set_name=set_name,
         foil=payload.foil,
         target_price=payload.target_price,
+        printings=[
+            CardPrinting(
+                cardmarket_id=printing.cardmarket_id,
+                scryfall_id=printing.scryfall_id,
+                set_code=printing.set_code,
+                set_name=printing.set_name,
+            )
+            for printing in printings
+        ],
     )
     session.add(card)
     session.commit()
@@ -139,6 +171,6 @@ def card_history(card_id: int, session: Session = Depends(get_session)) -> CardH
         set_name=card.set_name,
         foil=card.foil,
         target_price=card.target_price,
-        checks=[LatestPrice(**check.model_dump()) for check in checks],
+        checks=[to_latest_price(check, card) for check in checks],
         alerts=[AlertRead(**alert.model_dump()) for alert in alerts],
     )

@@ -22,7 +22,7 @@
           </label>
           <label>
             Set code
-            <input name="set_code" required minlength="2" maxlength="6" placeholder="cmm" autocomplete="off" />
+            <input name="set_code" minlength="2" maxlength="6" placeholder="any printing" autocomplete="off" />
           </label>
           <label>
             Target price (€)
@@ -35,8 +35,9 @@
           <button type="submit">Add to watchlist</button>
         </form>
         <p class="hint">
-          The set code is the one Scryfall uses, e.g. <code>cmm</code> for Commander Masters.
-          <a href="https://scryfall.com/sets" target="_blank" rel="noopener">Look up set codes</a>
+          Leave the set code empty to watch every printing and get the cheapest one.
+          For one specific printing, use the code Scryfall uses, e.g. <code>cmm</code> for Commander Masters
+          (<a href="https://scryfall.com/sets" target="_blank" rel="noopener">look up set codes</a>).
         </p>
         <p id="message" class="message" role="status" hidden></p>
       </section>

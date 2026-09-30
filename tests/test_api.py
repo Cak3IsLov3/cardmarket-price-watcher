@@ -4,9 +4,10 @@ import respx
 
 from app.config import PRICE_GUIDE_URL
 from app.services.scryfall import SCRYFALL_API
-from tests.sample_data import SAMPLE_GUIDE, SOL_RING
+from tests.sample_data import SAMPLE_GUIDE, SOL_RING, SOL_RING_DIGITAL, SOL_RING_OTHER
 
 NAMED_URL = f"{SCRYFALL_API}/cards/named"
+SEARCH_URL = f"{SCRYFALL_API}/cards/search"
 WEBHOOK_URL = "https://discord.test/webhook"
 
 SOL_RING_REQUEST = {"name": "Sol Ring", "set_code": "cmm", "target_price": "1.00"}
@@ -20,6 +21,16 @@ def fake_webhook(monkeypatch):
 def add_sol_ring(client, target_price="1.00"):
     respx.get(NAMED_URL).mock(return_value=httpx.Response(200, json=SOL_RING))
     return client.post("/watchlist", json={**SOL_RING_REQUEST, "target_price": target_price})
+
+
+def add_sol_ring_any_printing(client, target_price="1.00"):
+    respx.get(SEARCH_URL).mock(
+        return_value=httpx.Response(
+            200, json={"data": [SOL_RING, SOL_RING_DIGITAL, SOL_RING_OTHER], "has_more": False}
+        )
+    )
+    request = {**SOL_RING_REQUEST, "set_code": None, "target_price": target_price}
+    return client.post("/watchlist", json=request)
 
 
 def mock_feed_and_webhook():
@@ -38,6 +49,7 @@ def test_add_card(client):
     assert body["name"] == "Sol Ring"
     assert body["set_name"] == "Commander Masters"
     assert body["target_price"] == "1.00"
+    assert body["printing_count"] == 1
     assert body["cardmarket_url"].endswith("idProduct=721733")
     assert body["latest_price"] is None
 
@@ -64,6 +76,30 @@ def test_add_card_when_scryfall_is_down_returns_502(client):
 def test_add_card_with_invalid_price_returns_422(client):
     response = client.post("/watchlist", json={**SOL_RING_REQUEST, "target_price": "0"})
     assert response.status_code == 422
+
+
+@respx.mock
+def test_add_card_any_printing(client):
+    response = add_sol_ring_any_printing(client)
+    assert response.status_code == 201
+    body = response.json()
+    assert body["set_code"] is None
+    assert body["set_name"] is None
+    assert body["printing_count"] == 2  # the digital-only printing is skipped
+    assert "Search?searchString=Sol+Ring" in body["cardmarket_url"]
+
+
+@respx.mock
+def test_empty_set_code_means_any_printing(client):
+    add_sol_ring_any_printing(client)
+    response = client.post("/watchlist", json={**SOL_RING_REQUEST, "set_code": ""})
+    assert response.status_code == 409  # same card, same "any printing" watch
+
+
+@respx.mock
+def test_same_card_can_be_watched_per_set_and_any_printing(client):
+    assert add_sol_ring(client).status_code == 201
+    assert add_sol_ring_any_printing(client).status_code == 201
 
 
 # --- DELETE /watchlist/{id} ---
@@ -108,6 +144,24 @@ def test_check_without_price_drop_sends_no_alert(client):
     assert result["checked"] == 1
     assert result["alerts_sent"] == 0
     assert webhook.call_count == 0
+
+
+@respx.mock
+def test_check_any_printing_uses_cheapest(client):
+    add_sol_ring_any_printing(client, target_price="0.40")  # Commander 2021 is 0.30
+    webhook = mock_feed_and_webhook()
+
+    result = client.post("/watchlist/check").json()
+    assert result["checked"] == 1
+    assert result["alerts_sent"] == 1
+
+    latest = client.get("/watchlist").json()[0]["latest_price"]
+    assert latest["low"] == "0.30"
+    assert latest["set_name"] == "Commander 2021"
+
+    embed = webhook.calls.last.request.read().decode()
+    assert "Goedkoopste printing: Commander 2021" in embed
+    assert "idProduct=555555" in embed
 
 
 # --- GET /watchlist/{id}/history ---

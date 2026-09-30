@@ -54,6 +54,22 @@ function cell(content, className) {
   return td;
 }
 
+function setCell(card) {
+  if (card.set_code) {
+    return cell(`${card.set_name} (${card.set_code.toUpperCase()})`, "wrap");
+  }
+  const content = document.createElement("span");
+  content.textContent = `Any printing (${card.printing_count})`;
+  const setName = card.latest_price?.set_name;
+  if (setName) {
+    const detail = document.createElement("span");
+    detail.className = "detail";
+    detail.textContent = `Cheapest: ${setName}`;
+    content.append(detail);
+  }
+  return cell(content, "wrap");
+}
+
 function renderRow(card) {
   const price = card.latest_price;
 
@@ -78,7 +94,7 @@ function renderRow(card) {
   const row = document.createElement("tr");
   row.append(
     cell(link),
-    cell(`${card.set_name} (${card.set_code.toUpperCase()})`, "wrap"),
+    setCell(card),
     cell(card.foil ? "Yes" : "No"),
     cell(euro(card.target_price), "number"),
     lowest,
@@ -103,7 +119,8 @@ async function loadWatchlist() {
 }
 
 async function removeCard(card) {
-  if (!confirm(`Remove ${card.name} (${card.set_name}) and its price history?`)) return;
+  const which = card.set_name ?? "any printing";
+  if (!confirm(`Remove ${card.name} (${which}) and its price history?`)) return;
   const response = await request(`/watchlist/${card.id}`, { method: "DELETE" });
   if (!response) return;
   if (response.ok) {
@@ -119,7 +136,7 @@ form.addEventListener("submit", async (event) => {
   const data = new FormData(form);
   const payload = {
     name: data.get("name").trim(),
-    set_code: data.get("set_code").trim().toLowerCase(),
+    set_code: data.get("set_code").trim().toLowerCase() || null,
     target_price: data.get("target_price"),
     foil: data.get("foil") === "on",
   };
@@ -136,7 +153,8 @@ form.addEventListener("submit", async (event) => {
 
   if (response.ok) {
     const card = await response.json();
-    showMessage(`Added ${card.name} (${card.set_name}). Click "Check prices now" to fetch its price.`, "success");
+    const which = card.set_name ?? `any of ${card.printing_count} printings`;
+    showMessage(`Added ${card.name} (${which}). Click "Check prices now" to fetch its price.`, "success");
     form.reset();
     await loadWatchlist();
   } else {

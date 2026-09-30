@@ -28,8 +28,35 @@ SOL_RING_ENTRY = {
     "avg30-foil": 2.97,
 }
 
+# Constructed (not real) second printing, cheaper than Commander Masters, for "any printing" tests
+SOL_RING_OTHER = {
+    "object": "card",
+    "id": "00000000-0000-0000-0000-000000000001",
+    "name": "Sol Ring",
+    "set": "c21",
+    "set_name": "Commander 2021",
+    "cardmarket_id": 555555,
+}
+SOL_RING_OTHER_ENTRY = {
+    "idProduct": 555555,
+    "idCategory": 1,
+    "low": 0.30,
+    "trend": 0.55,
+    "avg30": 0.60,
+}
+
+# Digital-only printing: Scryfall has no cardmarket_id for these
+SOL_RING_DIGITAL = {
+    "object": "card",
+    "id": "00000000-0000-0000-0000-000000000002",
+    "name": "Sol Ring",
+    "set": "vma",
+    "set_name": "Vintage Masters",
+    "digital": True,
+}
+
 SAMPLE_GUIDE = {
     "version": 1,
     "createdAt": "2026-09-30T09:54:57+0200",
-    "priceGuides": [SOL_RING_ENTRY, {"idProduct": 1, "low": 0.02}],
+    "priceGuides": [SOL_RING_ENTRY, SOL_RING_OTHER_ENTRY, {"idProduct": 1, "low": 0.02}],
 }

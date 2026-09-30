@@ -15,6 +15,7 @@ GREEN = 0x2ECC71
 class AlertMessage:
     card_name: str
     set_name: str
+    any_printing: bool
     foil: bool
     price: Decimal
     target_price: Decimal
@@ -23,11 +24,15 @@ class AlertMessage:
 
 def build_payload(message: AlertMessage) -> dict:
     name = f"{message.card_name} (Foil)" if message.foil else message.card_name
+    if message.any_printing:
+        description = f"Goedkoopste printing: {message.set_name}"
+    else:
+        description = message.set_name
     return {
         "embeds": [
             {
                 "title": f"💰 PRICE DROP: {name}",
-                "description": message.set_name,
+                "description": description,
                 "url": message.cardmarket_url,
                 "color": GREEN,
                 "fields": [
