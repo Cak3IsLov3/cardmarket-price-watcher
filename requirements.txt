@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+httpx
+apscheduler>=3.10,<4
+python-dotenv
+pytest
+respx

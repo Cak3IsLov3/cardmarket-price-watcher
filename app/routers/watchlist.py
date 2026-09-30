@@ -1,0 +1,94 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Session, col, select
+
+from dataclasses import asdict
+
+from app.services.checker import run_price_check
+from app.services.price_guide import PriceGuideError
+from app.database import get_session
+from app.models import Card, PriceCheck
+from app.schemas import CardCreate, CardRead, LatestPrice
+from app.services.scryfall import (
+    CardNotFoundError,
+    NotOnCardmarketError,
+    ScryfallError,
+    lookup_card,
+)
+
+router = APIRouter(prefix="/watchlist", tags=["watchlist"])
+
+CARDMARKET_PRODUCT_URL = "https://www.cardmarket.com/en/Magic/Products?idProduct={id}"
+
+
+def to_card_read(card: Card, session: Session) -> CardRead:
+    latest = session.exec(
+        select(PriceCheck)
+        .where(PriceCheck.card_id == card.id)
+        .order_by(col(PriceCheck.checked_at).desc())
+    ).first()
+    return CardRead(
+        **card.model_dump(),
+        cardmarket_url=CARDMARKET_PRODUCT_URL.format(id=card.cardmarket_id),
+        latest_price=LatestPrice(**latest.model_dump()) if latest else None,
+    )
+
+
+@router.post("", response_model=CardRead, status_code=status.HTTP_201_CREATED)
+def add_card(payload: CardCreate, session: Session = Depends(get_session)) -> CardRead:
+    try:
+        info = lookup_card(payload.name, payload.set_code)
+    except CardNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except NotOnCardmarketError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    except ScryfallError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+
+    existing = session.exec(
+        select(Card).where(
+            Card.cardmarket_id == info.cardmarket_id, Card.foil == payload.foil
+        )
+    ).first()
+    if existing:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail=f"Card is already on your watchlist (id {existing.id})",
+        )
+
+    card = Card(
+        name=info.name,
+        set_code=info.set_code,
+        set_name=info.set_name,
+        cardmarket_id=info.cardmarket_id,
+        scryfall_id=info.scryfall_id,
+        foil=payload.foil,
+        target_price=payload.target_price,
+    )
+    session.add(card)
+    session.commit()
+    session.refresh(card)
+    return to_card_read(card, session)
+
+
+@router.get("", response_model=list[CardRead])
+def list_cards(session: Session = Depends(get_session)) -> list[CardRead]:
+    cards = session.exec(select(Card)).all()
+    return [to_card_read(card, session) for card in cards]
+
+
+@router.delete("/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_card(card_id: int, session: Session = Depends(get_session)) -> None:
+    card = session.get(Card, card_id)
+    if card is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Card not found")
+    session.delete(card)
+    session.commit()
+
+
+@router.post("/check")
+async def check_prices() -> dict:
+    try:
+        result = await run_price_check()
+    except PriceGuideError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    return asdict(result)
