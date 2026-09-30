@@ -25,6 +25,7 @@ class Card(SQLModel, table=True):
     price_checks: list["PriceCheck"] = Relationship(
         back_populates="card", cascade_delete=True
     )
+    alerts: list["Alert"] = Relationship(back_populates="card", cascade_delete=True)
 
 
 class PriceCheck(SQLModel, table=True):
@@ -37,3 +38,13 @@ class PriceCheck(SQLModel, table=True):
     price_guide_created_at: str
 
     card: Card | None = Relationship(back_populates="price_checks")
+
+
+class Alert(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    card_id: int = Field(foreign_key="card.id", index=True, ondelete="CASCADE")
+    sent_at: datetime = Field(default_factory=utcnow)
+    price_at_alert: Decimal = Field(max_digits=10, decimal_places=2)
+    target_price: Decimal = Field(max_digits=10, decimal_places=2)
+
+    card: Card | None = Relationship(back_populates="alerts")

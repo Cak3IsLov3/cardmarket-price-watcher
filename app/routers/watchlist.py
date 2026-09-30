@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, col, select
+from app.config import CARDMARKET_PRODUCT_URL
 
 from dataclasses import asdict
 
@@ -17,7 +18,6 @@ from app.services.scryfall import (
 
 router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
-CARDMARKET_PRODUCT_URL = "https://www.cardmarket.com/en/Magic/Products?idProduct={id}"
 
 
 def to_card_read(card: Card, session: Session) -> CardRead:
