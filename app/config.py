@@ -11,3 +11,4 @@ PRICE_GUIDE_URL = os.getenv(
 )
 SCRYFALL_USER_AGENT = os.getenv("SCRYFALL_USER_AGENT", "CardmarketPriceWatcher/0.1")
 CARDMARKET_PRODUCT_URL = "https://www.cardmarket.com/en/Magic/Products?idProduct={id}"
+CHECK_INTERVAL_HOURS = int(os.getenv("CHECK_INTERVAL_HOURS", "1"))
