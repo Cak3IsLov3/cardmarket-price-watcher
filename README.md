@@ -57,7 +57,7 @@ FastAPI · SQLModel · SQLite · APScheduler · httpx · Pydantic · Pytest · r
 Requires Python 3.12 or newer.
 
 ```bash
-git clone https://github.com/<your-username>/cardmarket-price-watcher.git
+git clone https://github.com/Cak3IsLov3/cardmarket-price-watcher.git
 cd cardmarket-price-watcher
 
 python -m venv .venv
