@@ -61,3 +61,18 @@ class CardRead(BaseModel):
     created_at: datetime
     cardmarket_url: str
     latest_price: LatestPrice | None
+
+class AlertRead(BaseModel):
+    sent_at: datetime
+    price_at_alert: Decimal
+    target_price: Decimal
+
+
+class CardHistory(BaseModel):
+    card_id: int
+    name: str
+    set_name: str
+    foil: bool
+    target_price: Decimal
+    checks: list[LatestPrice]
+    alerts: list[AlertRead]

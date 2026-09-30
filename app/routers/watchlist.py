@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, col, select
 from app.config import CARDMARKET_PRODUCT_URL
-
 from dataclasses import asdict
+from app.models import Alert, Card, PriceCheck
+from app.schemas import AlertRead, CardCreate, CardHistory, CardRead, LatestPrice
 
 from app.services.checker import run_price_check
 from app.services.price_guide import PriceGuideError
@@ -92,3 +93,28 @@ async def check_prices() -> dict:
     except PriceGuideError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc))
     return asdict(result)
+
+@router.get("/{card_id}/history", response_model=CardHistory)
+def card_history(card_id: int, session: Session = Depends(get_session)) -> CardHistory:
+    card = session.get(Card, card_id)
+    if card is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Card not found")
+
+    checks = session.exec(
+        select(PriceCheck)
+        .where(PriceCheck.card_id == card_id)
+        .order_by(col(PriceCheck.checked_at))
+    ).all()
+    alerts = session.exec(
+        select(Alert).where(Alert.card_id == card_id).order_by(col(Alert.sent_at))
+    ).all()
+
+    return CardHistory(
+        card_id=card.id,
+        name=card.name,
+        set_name=card.set_name,
+        foil=card.foil,
+        target_price=card.target_price,
+        checks=[LatestPrice(**check.model_dump()) for check in checks],
+        alerts=[AlertRead(**alert.model_dump()) for alert in alerts],
+    )
