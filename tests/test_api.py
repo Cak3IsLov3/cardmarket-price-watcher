@@ -160,7 +160,7 @@ def test_check_any_printing_uses_cheapest(client):
     assert latest["set_name"] == "Commander 2021"
 
     embed = webhook.calls.last.request.read().decode()
-    assert "Goedkoopste printing: Commander 2021" in embed
+    assert "Cheapest printing: Commander 2021" in embed
     assert "idProduct=555555" in embed
 
 

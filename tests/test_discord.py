@@ -30,4 +30,4 @@ def test_build_payload_marks_foil():
 
 def test_build_payload_names_cheapest_printing():
     embed = build_payload(make_message(any_printing=True))["embeds"][0]
-    assert embed["description"] == "Goedkoopste printing: Commander Masters"
+    assert embed["description"] == "Cheapest printing: Commander Masters"

@@ -25,7 +25,7 @@ class AlertMessage:
 def build_payload(message: AlertMessage) -> dict:
     name = f"{message.card_name} (Foil)" if message.foil else message.card_name
     if message.any_printing:
-        description = f"Goedkoopste printing: {message.set_name}"
+        description = f"Cheapest printing: {message.set_name}"
     else:
         description = message.set_name
     return {
@@ -36,8 +36,8 @@ def build_payload(message: AlertMessage) -> dict:
                 "url": message.cardmarket_url,
                 "color": GREEN,
                 "fields": [
-                    {"name": "Laagste prijs", "value": f"€{message.price}", "inline": True},
-                    {"name": "Jouw drempel", "value": f"€{message.target_price}", "inline": True},
+                    {"name": "Lowest price", "value": f"€{message.price}", "inline": True},
+                    {"name": "Your target", "value": f"€{message.target_price}", "inline": True},
                 ],
             }
         ]
