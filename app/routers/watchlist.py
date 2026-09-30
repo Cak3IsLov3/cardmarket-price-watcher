@@ -1,15 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, col, select
-from app.config import CARDMARKET_PRODUCT_URL
 from dataclasses import asdict
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import Engine
+from sqlmodel import Session, col, select
+
+from app.config import CARDMARKET_PRODUCT_URL
+from app.database import get_engine, get_session
 from app.models import Alert, Card, PriceCheck
 from app.schemas import AlertRead, CardCreate, CardHistory, CardRead, LatestPrice
-
 from app.services.checker import run_price_check
 from app.services.price_guide import PriceGuideError
-from app.database import get_session
-from app.models import Card, PriceCheck
-from app.schemas import CardCreate, CardRead, LatestPrice
 from app.services.scryfall import (
     CardNotFoundError,
     NotOnCardmarketError,
@@ -87,9 +87,9 @@ def delete_card(card_id: int, session: Session = Depends(get_session)) -> None:
 
 
 @router.post("/check")
-async def check_prices() -> dict:
+async def check_prices(db_engine: Engine = Depends(get_engine)) -> dict:
     try:
-        result = await run_price_check()
+        result = await run_price_check(db_engine)
     except PriceGuideError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc))
     return asdict(result)
